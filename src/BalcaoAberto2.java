@@ -11,13 +11,13 @@ import javax.swing.JFrame;
 
 public class BalcaoAberto2 {
     public static void main(String[] args) {
-        // Aqui, você deve criar uma instância da sua CadastroVIEW
+        // Instância da tela CadastroVIEW
         CadastroVIEW cadastroView = new CadastroVIEW();
         
-        // Chame o método setVisible(true) para exibir a tela de CadastroVIEW
+        // método setVisible(true) para exibir a tela de CadastroVIEW
         cadastroView.setVisible(true);
         
-        // Aqui você pode adicionar mais lógica, se necessário.
+        // espaço para mais lógica. Analisar a necessidade.
     }
 
     private static class CadastroVIEW extends JFrame {
