@@ -15,20 +15,18 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-    public class BalcaoAberto2 extends JFrame {
+public class BalcaoAberto2 extends JFrame {
 
-        public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new BalcaoAberto2().setVisible(true);
-        });
-    }
-    
-    private final String DATABASE_URL = "jdbc:mysql://localhost:3306/uc11_Bruno_Castro";
-    private final String USER = "root";
-    private final String PASSWORD = "=senaCEad2022";
+    private static final String DATABASE_URL = "jdbc:mysql://localhost:3306/uc11_Bruno_Castro";
+    private static final String USER = "root";
+    private static final String PASSWORD = "=senaCEad2022";
 
     private final DefaultTableModel tableModel;
     private final JTable produtosTable;
+
+    private static final String COLUMN_NAME = "Nome";
+    private static final String COLUMN_VALUE = "Valor";
+    private static final String COLUMN_STATUS = "Status";
 
     public BalcaoAberto2() {
         setTitle("Balcão Aberto");
@@ -38,6 +36,7 @@ import java.util.List;
         JButton cadastrarButton = new JButton("Cadastrar Produtos");
         JButton consultarButton = new JButton("Consultar Produtos");
         JButton venderButton = new JButton("Vender Produto");
+        JButton listarVendidosButton = new JButton("Listar Produtos Vendidos");
 
         JPanel panelPrincipal = new JPanel();
         panelPrincipal.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 20));
@@ -56,10 +55,11 @@ import java.util.List;
         add(scrollPane, BorderLayout.CENTER);
 
         JPanel panelBotoes = new JPanel();
-        panelBotoes.setLayout(new GridLayout(3, 1));
+        panelBotoes.setLayout(new GridLayout(4, 1));
         panelBotoes.add(cadastrarButton);
         panelBotoes.add(consultarButton);
         panelBotoes.add(venderButton);
+        panelBotoes.add(listarVendidosButton);
 
         add(panelBotoes, BorderLayout.SOUTH);
 
@@ -68,7 +68,7 @@ import java.util.List;
                 cadastrarProduto();
                 atualizarListaProdutos();
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(null, "Erro ao cadastrar produto. Verifique o console para mais detalhes.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Erro ao cadastrar produto. Detalhes: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -79,6 +79,14 @@ import java.util.List;
         venderButton.addActionListener((ActionEvent e) -> {
             venderProduto();
             atualizarListaProdutos();
+        });
+
+        listarVendidosButton.addActionListener((ActionEvent e) -> {
+            try {
+                listarProdutosVendidos();
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(null, "Erro ao listar produtos vendidos. Detalhes: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         });
     }
 
@@ -102,14 +110,9 @@ import java.util.List;
     }
 
     private void atualizarListaProdutos() {
-        try {
-            List<String[]> listaProdutos = obterListaProdutos();
-            String[] colunas = {"Nome", "Valor", "Status"};
-
-            tableModel.setDataVector(listaProdutos.toArray(Object[][]::new), colunas);
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Erro ao obter lista de produtos. Verifique o console para mais detalhes.", "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        List<String[]> listaProdutos = obterListaProdutos();
+        String[] colunas = {COLUMN_NAME, COLUMN_VALUE, COLUMN_STATUS};
+        tableModel.setDataVector(listaProdutos.toArray(Object[][]::new), colunas);
     }
 
     private void venderProduto() {
@@ -119,11 +122,18 @@ import java.util.List;
             produtosDAO.venderProduto(nomeProduto);
             JOptionPane.showMessageDialog(null, "Produto vendido com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Erro ao vender produto. Verifique o console para mais detalhes.", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Erro ao vender produto. Detalhes: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private List<String[]> obterListaProdutos() throws SQLException {
+    private void listarProdutosVendidos() throws SQLException {
+        List<String[]> listaProdutosVendidos = obterListaProdutosVendidos();
+        String[] colunas = {COLUMN_NAME, COLUMN_VALUE, COLUMN_STATUS};
+
+        tableModel.setDataVector(listaProdutosVendidos.toArray(Object[][]::new), colunas);
+    }
+
+    private List<String[]> obterListaProdutos() {
         List<String[]> listaProdutos = new ArrayList<>();
 
         try (Connection connection = DriverManager.getConnection(DATABASE_URL, USER, PASSWORD)) {
@@ -131,18 +141,52 @@ import java.util.List;
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
                  ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    String nome = resultSet.getString("nome");
-                    String valor = String.valueOf(resultSet.getInt("valor"));
-                    String status = resultSet.getString("status");
+                    String nome = resultSet.getString(COLUMN_NAME);
+                    String valor = String.valueOf(resultSet.getInt(COLUMN_VALUE));
+                    String status = resultSet.getString(COLUMN_STATUS);
 
                     listaProdutos.add(new String[]{nome, valor, status});
                 }
             }
+        } catch (SQLException e) {
+            // Trate a exceção conforme necessário
+            e.printStackTrace();
         }
 
         return listaProdutos;
     }
+
+    private List<String[]> obterListaProdutosVendidos() throws SQLException {
+        List<String[]> listaProdutosVendidos = new ArrayList<>();
+
+        try (Connection connection = DriverManager.getConnection(DATABASE_URL, USER, PASSWORD)) {
+            String sql = "SELECT nome, valor, status FROM produtos WHERE status = 'Vendido'";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                 ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    String nome = resultSet.getString(COLUMN_NAME);
+                    String valor = String.valueOf(resultSet.getInt(COLUMN_VALUE));
+                    String status = resultSet.getString(COLUMN_STATUS);
+
+                    listaProdutosVendidos.add(new String[]{nome, valor, status});
+                }
+            }
+        } catch (SQLException e) {
+            // Trate a exceção conforme necessário
+            e.printStackTrace();
+        }
+
+        return listaProdutosVendidos;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            new BalcaoAberto2().setVisible(true);
+        });
+    }
 }
+
+
 
 
 
