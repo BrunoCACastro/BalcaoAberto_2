@@ -4,6 +4,8 @@ USE uc11_Bruno_Castro;
 
 SHOW TABLES;
 
+SELECT * FROM produtos;
+
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
